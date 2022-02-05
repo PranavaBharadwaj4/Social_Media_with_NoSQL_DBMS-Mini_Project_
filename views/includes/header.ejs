@@ -266,16 +266,6 @@
           return false;
         }
 
-        function prepareToReply(self) {
-          $("#replyModal input[name='postId']").val(
-            self.getAttribute("data-post-id")
-          );
-          $("#replyModal input[name='commentId']").val(
-            self.getAttribute("data-comment-id")
-          );
-          $("#replyModal").modal("show");
-        }
-
         function doPostReply(form) {
           var ajax = new XMLHttpRequest();
           ajax.open("POST", "/postReply", true);

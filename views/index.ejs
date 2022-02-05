@@ -103,8 +103,16 @@
               months[createdAt.getMonth()] +
               ", " +
               createdAt.getFullYear();
+            html += "<span>posted at : " + date + "</span>";
 
-            html += "<span>Published: " + date + "</span>";
+            if (window.user._id === data.user._id) {
+              html += '<figure style ="position : absolute ; right : 0;">';
+              html += '<a href="/deletePost/' + data._id + '">';
+              html += '<i class="ti-close"></i>';
+              html += "</a>";
+              html += "</figure>";
+            }
+
             html += "</div>";
 
             html += '<div class="post-meta">';

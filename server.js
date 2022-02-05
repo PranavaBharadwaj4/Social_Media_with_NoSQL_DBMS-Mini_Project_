@@ -95,7 +95,6 @@ http.listen(port, function () {
                     city: "",
                     country: "",
                     aboutMe: "",
-                    notifications: [],
                   },
                   function (error, data) {
                     result.json({
@@ -633,6 +632,21 @@ http.listen(port, function () {
         );
       });
 
+      app.get("/deletePost/:id", (request, result) => {
+        const post_id = request.params.id;
+        // alert("deleting ");
+        database
+          .collection("posts")
+          .deleteOne({ _id: ObjectId(post_id) }, (e, d) => {
+            database
+              .collection("comment")
+              .deleteOne({ post_id: post_id }, (e, d) => {
+                if (e) console.log("error while deleting");
+                result.redirect("/");
+              });
+          });
+      });
+
       app.post("/toggleLikePost", function (request, result) {
         var accessToken = request.fields.accessToken;
         var _id = request.fields._id;
@@ -710,26 +724,6 @@ http.listen(port, function () {
                             },
                           }
                         );
-                        // database.collection("users").updateOne(
-                        //   {
-                        //     _id: post.user._id,
-                        //   },
-                        //   {
-                        //     $push: {
-                        //       notifications: {
-                        //         _id: ObjectId(),
-                        //         type: "photo_liked",
-                        //         content: user.name + " has liked your post.",
-                        //         profileImage: user.profileImage,
-                        //         isRead: false,
-                        //         post: {
-                        //           _id: post._id,
-                        //         },
-                        //         createdAt: new Date().getTime(),
-                        //       },
-                        //     },
-                        //   }
-                        // );
                       }
                       database.collection("posts").updateOne(
                         {
@@ -745,28 +739,6 @@ http.listen(port, function () {
                           },
                         },
                         function (error, data) {
-                          // database.collection("users").updateOne(
-                          //   {
-                          //     $and: [
-                          //       {
-                          //         _id: post.user._id,
-                          //       },
-                          //       {
-                          //         "posts._id": post._id,
-                          //       },
-                          //     ],
-                          //   },
-                          //   {
-                          //     $push: {
-                          //       "posts.$[].likers": {
-                          //         _id: user._id,
-                          //         name: user.name,
-                          //         profileImage: user.profileImage,
-                          //       },
-                          //     },
-                          //   }
-                          // );
-
                           result.json({
                             status: "success",
                             message: "Post has been liked.",
@@ -852,6 +824,7 @@ http.listen(port, function () {
                                               {
                                                 _id: ObjectId(),
                                                 type: "new_comment",
+                                                username: user.name,
                                                 content:
                                                   user.name +
                                                   " commented on your post.",
@@ -894,28 +867,6 @@ http.listen(port, function () {
                                       }
                                     }
                                   );
-                                // database.collection("users").updateOne(
-                                //   {
-                                //     _id: post.user._id,
-                                //   },
-                                //   {
-                                //     $push: {
-                                //       notifications: {
-                                //         _id: ObjectId(),
-                                //         type: "new_comment",
-                                //         content:
-                                //           user.name +
-                                //           " commented on your post.",
-                                //         profileImage: user.profileImage,
-                                //         post: {
-                                //           _id: post._id,
-                                //         },
-                                //         isRead: false,
-                                //         createdAt: new Date().getTime(),
-                                //       },
-                                //     },
-                                //   }
-                                // );
                               }
                               database.collection("posts").findOne(
                                 {
@@ -1017,30 +968,6 @@ http.listen(port, function () {
                                       }
                                     }
                                   );
-
-                                //fdf
-                                // database.collection("users").updateOne(
-                                //   {
-                                //     _id: post.user._id,
-                                //   },
-                                //   {
-                                //     $push: {
-                                //       notifications: {
-                                //         _id: ObjectId(),
-                                //         type: "new_comment",
-                                //         content:
-                                //           user.name +
-                                //           " commented on your post.",
-                                //         profileImage: user.profileImage,
-                                //         post: {
-                                //           _id: post._id,
-                                //         },
-                                //         isRead: false,
-                                //         createdAt: new Date().getTime(),
-                                //       },
-                                //     },
-                                //   }
-                                // );
                               }
                               database.collection("posts").findOne(
                                 {
@@ -1188,6 +1115,49 @@ http.listen(port, function () {
                             }
                           );
                         }
+
+                        database
+                          .collection("notification")
+                          .findOne({ user_id: user._id }, (e, d) => {
+                            if (d == null) {
+                              database.collection("notification").insertOne({
+                                user_id: user._id,
+                                notifications: [
+                                  {
+                                    _id: ObjectId(),
+                                    type: "friend-request",
+                                    username: me.name,
+                                    content:
+                                      me.name + " sent you friend request  !.",
+                                    profileImage: me.profileImage,
+                                    isRead: false,
+                                    createdAt: new Date().getTime(),
+                                  },
+                                ],
+                              });
+                            } else {
+                              database.collection("notification").updateOne(
+                                {
+                                  user_id: user._id,
+                                },
+                                {
+                                  $push: {
+                                    notifications: {
+                                      _id: ObjectId(),
+                                      type: "friend-request",
+                                      username: me.name,
+                                      content:
+                                        me.name + " sent you friend request.",
+                                      profileImage: me.profileImage,
+                                      isRead: false,
+                                      createdAt: new Date().getTime(),
+                                    },
+                                  },
+                                }
+                              );
+                            }
+                          });
+
                         database
                           .collection("friendsList")
                           .findOne({ user_id: user._id }, (e, data) => {
@@ -1339,6 +1309,51 @@ http.listen(port, function () {
                             },
                           },
                           function (error, data) {
+                            database
+                              .collection("notification")
+                              .findOne({ user_id: user._id }, (e, d) => {
+                                if (d == null) {
+                                  database
+                                    .collection("notification")
+                                    .insertOne({
+                                      user_id: user._id,
+                                      notifications: [
+                                        {
+                                          _id: ObjectId(),
+                                          type: "friend-request",
+                                          username: me.name,
+                                          content:
+                                            me.name +
+                                            " accepted   your friend request !.",
+                                          profileImage: me.profileImage,
+                                          isRead: false,
+                                          createdAt: new Date().getTime(),
+                                        },
+                                      ],
+                                    });
+                                } else {
+                                  database.collection("notification").updateOne(
+                                    {
+                                      user_id: user._id,
+                                    },
+                                    {
+                                      $push: {
+                                        notifications: {
+                                          _id: ObjectId(),
+                                          type: "friend-request",
+                                          username: me.name,
+                                          content:
+                                            me.name +
+                                            " accepted your friend request.",
+                                          profileImage: me.profileImage,
+                                          isRead: false,
+                                          createdAt: new Date().getTime(),
+                                        },
+                                      },
+                                    }
+                                  );
+                                }
+                              });
                             result.json({
                               status: "success",
                               message: "Friend Request has been accepted .",
