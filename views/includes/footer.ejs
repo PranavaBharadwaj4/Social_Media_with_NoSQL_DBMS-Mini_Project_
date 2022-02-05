@@ -38,6 +38,7 @@
 <script>
 
 	window.user = null;
+	window.notifications = null;
 
 	function getUser() {
 
@@ -53,6 +54,7 @@
 
 					if (response.status == "success") {
 						window.user = response.data;
+						window.notifications = response.notifications
 
 						if (typeof isUpdateProfile !== "undefined" && isUpdateProfile) {
 							showProfileData();
@@ -80,8 +82,8 @@
 							markNotificationsAsRead();
 						} else {
 							var notificationsCount = 0;
-							for (var a = 0; a < window.user.notifications.length; a++) {
-								if (!window.user.notifications[a].isRead) {
+							for (var a = 0; a < window.notifications.length; a++) {
+								if (!window.notifications[a].isRead) {
 									notificationsCount++;
 								}
 							}

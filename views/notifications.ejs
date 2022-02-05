@@ -33,7 +33,7 @@
   function showNotifications() {
     var html = "";
 
-    var notifications = window.user.notifications.reverse();
+    var notifications = window.notifications.reverse();
 
     for (var a = 0; a < notifications.length; a++) {
       var data = notifications[a];
@@ -63,9 +63,7 @@
 
       html += "<span>" + date + "</span>";
       html += "</div>";
-      // if(data.status === "Pending"){
-      //   html += '<a href="javascript:void(0);" data-id"'+data._id+
-      // }
+
       if (data.type == "new_comment" || data.type == "photo_liked") {
         html += "</a>";
       }

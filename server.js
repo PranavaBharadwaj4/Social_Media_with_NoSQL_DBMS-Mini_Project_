@@ -95,7 +95,6 @@ http.listen(port, function () {
                     city: "",
                     country: "",
                     aboutMe: "",
-
                     notifications: [],
                   },
                   function (error, data) {
@@ -211,11 +210,17 @@ http.listen(port, function () {
                 message: "User has been logged out. Please login again.",
               });
             } else {
-              result.json({
-                status: "success",
-                message: "Record has been fetched.",
-                data: user,
-              });
+              database
+                .collection("notification")
+                .findOne({ user_id: user._id }, (e, d) => {
+                  if (e) console.log("error at geting user notificatoin");
+                  result.json({
+                    status: "success",
+                    message: "Record has been fetched.",
+                    data: user,
+                    notifications: d ? d.notifications : [],
+                  });
+                });
             }
           }
         );
@@ -549,26 +554,6 @@ http.listen(port, function () {
                   },
                 },
                 function (error, data) {
-                  // database.collection("users").updateOne(
-                  //   {
-                  //     accessToken: accessToken,
-                  //   },
-                  //   {
-                  //     $push: {
-                  //       posts: {
-                  //         _id: data.insertedId,
-                  //         caption: caption,
-                  //         image: image,
-
-                  //         type: type,
-                  //         createdAt: createdAt,
-                  //         likers: [],
-                  //         comments: [],
-                  //       },
-                  //     },
-                  //   },
-                  //   function (error, data) {}
-                  // );
                   result.json({
                     status: "success",
                     message: "Post has been uploaded.",
@@ -600,10 +585,11 @@ http.listen(port, function () {
 
                   var ids = [];
                   ids.push(user._id);
-
-                  for (var j = 0; j < fnds.friends.length; j++) {
-                    if (fnds.friends[j].status === "Accepted")
-                      ids.push(fnds.friends[j].f_id);
+                  if (fnds !== undefined && fnds !== null && fnds) {
+                    for (var j = 0; j < fnds.friends.length; j++) {
+                      if (fnds.friends[j].status === "Accepted")
+                        ids.push(fnds.friends[j].f_id);
+                    }
                   }
 
                   database
@@ -616,7 +602,7 @@ http.listen(port, function () {
                     .sort({
                       createdAt: -1,
                     })
-                    .limit(5)
+                    .limit(7)
                     .toArray(function (error, data) {
                       var postIds = [];
                       for (var i = 0; i < data.length; i++) {
@@ -696,26 +682,6 @@ http.listen(port, function () {
                           },
                         },
                         function (error, data) {
-                          database.collection("users").updateOne(
-                            {
-                              $and: [
-                                {
-                                  _id: post.user._id,
-                                },
-                                {
-                                  "posts._id": post._id,
-                                },
-                              ],
-                            },
-                            {
-                              $pull: {
-                                "posts.$[].likers": {
-                                  _id: user._id,
-                                },
-                              },
-                            }
-                          );
-
                           result.json({
                             status: "unliked",
                             message: "Post has been unliked.",
@@ -723,27 +689,48 @@ http.listen(port, function () {
                         }
                       );
                     } else {
-                      database.collection("users").updateOne(
-                        {
-                          _id: post.user._id,
-                        },
-                        {
-                          $push: {
-                            notifications: {
-                              _id: ObjectId(),
-                              type: "photo_liked",
-                              content: user.name + " has liked your post.",
-                              profileImage: user.profileImage,
-                              isRead: false,
-                              post: {
-                                _id: post._id,
-                              },
-                              createdAt: new Date().getTime(),
-                            },
+                      if (user._id.toString() != post.user._id.toString()) {
+                        database.collection("notification").updateOne(
+                          {
+                            user_id: post.user._id,
                           },
-                        }
-                      );
-
+                          {
+                            $push: {
+                              notifications: {
+                                _id: ObjectId(),
+                                type: "photo_liked",
+                                content: user.name + " has liked your post.",
+                                profileImage: user.profileImage,
+                                isRead: false,
+                                post: {
+                                  _id: post._id,
+                                },
+                                createdAt: new Date().getTime(),
+                              },
+                            },
+                          }
+                        );
+                        // database.collection("users").updateOne(
+                        //   {
+                        //     _id: post.user._id,
+                        //   },
+                        //   {
+                        //     $push: {
+                        //       notifications: {
+                        //         _id: ObjectId(),
+                        //         type: "photo_liked",
+                        //         content: user.name + " has liked your post.",
+                        //         profileImage: user.profileImage,
+                        //         isRead: false,
+                        //         post: {
+                        //           _id: post._id,
+                        //         },
+                        //         createdAt: new Date().getTime(),
+                        //       },
+                        //     },
+                        //   }
+                        // );
+                      }
                       database.collection("posts").updateOne(
                         {
                           _id: ObjectId(_id),
@@ -758,27 +745,27 @@ http.listen(port, function () {
                           },
                         },
                         function (error, data) {
-                          database.collection("users").updateOne(
-                            {
-                              $and: [
-                                {
-                                  _id: post.user._id,
-                                },
-                                {
-                                  "posts._id": post._id,
-                                },
-                              ],
-                            },
-                            {
-                              $push: {
-                                "posts.$[].likers": {
-                                  _id: user._id,
-                                  name: user.name,
-                                  profileImage: user.profileImage,
-                                },
-                              },
-                            }
-                          );
+                          // database.collection("users").updateOne(
+                          //   {
+                          //     $and: [
+                          //       {
+                          //         _id: post.user._id,
+                          //       },
+                          //       {
+                          //         "posts._id": post._id,
+                          //       },
+                          //     ],
+                          //   },
+                          //   {
+                          //     $push: {
+                          //       "posts.$[].likers": {
+                          //         _id: user._id,
+                          //         name: user.name,
+                          //         profileImage: user.profileImage,
+                          //       },
+                          //     },
+                          //   }
+                          // );
 
                           result.json({
                             status: "success",
@@ -851,28 +838,84 @@ http.listen(port, function () {
                               if (
                                 user._id.toString() != post.user._id.toString()
                               ) {
-                                database.collection("users").updateOne(
-                                  {
-                                    _id: post.user._id,
-                                  },
-                                  {
-                                    $push: {
-                                      notifications: {
-                                        _id: ObjectId(),
-                                        type: "new_comment",
-                                        content:
-                                          user.name +
-                                          " commented on your post.",
-                                        profileImage: user.profileImage,
-                                        post: {
-                                          _id: post._id,
-                                        },
-                                        isRead: false,
-                                        createdAt: new Date().getTime(),
-                                      },
-                                    },
-                                  }
-                                );
+                                database
+                                  .collection("notification")
+                                  .findOne(
+                                    { user_id: post.user._id },
+                                    (e, d) => {
+                                      if (d == null) {
+                                        database
+                                          .collection("notification")
+                                          .insertOne({
+                                            user_id: post.user._id,
+                                            notifications: [
+                                              {
+                                                _id: ObjectId(),
+                                                type: "new_comment",
+                                                content:
+                                                  user.name +
+                                                  " commented on your post.",
+                                                profileImage: user.profileImage,
+                                                post: {
+                                                  _id: post._id,
+                                                },
+                                                isRead: false,
+                                                createdAt: new Date().getTime(),
+                                              },
+                                            ],
+                                          });
+                                      } else {
+                                        database
+                                          .collection("notification")
+                                          .updateOne(
+                                            {
+                                              user_id: post.user._id,
+                                            },
+                                            {
+                                              $push: {
+                                                notifications: {
+                                                  _id: ObjectId(),
+                                                  type: "new_comment",
+                                                  content:
+                                                    user.name +
+                                                    " commented on your post.",
+                                                  profileImage:
+                                                    user.profileImage,
+                                                  post: {
+                                                    _id: post._id,
+                                                  },
+                                                  isRead: false,
+                                                  createdAt:
+                                                    new Date().getTime(),
+                                                },
+                                              },
+                                            }
+                                          );
+                                      }
+                                    }
+                                  );
+                                // database.collection("users").updateOne(
+                                //   {
+                                //     _id: post.user._id,
+                                //   },
+                                //   {
+                                //     $push: {
+                                //       notifications: {
+                                //         _id: ObjectId(),
+                                //         type: "new_comment",
+                                //         content:
+                                //           user.name +
+                                //           " commented on your post.",
+                                //         profileImage: user.profileImage,
+                                //         post: {
+                                //           _id: post._id,
+                                //         },
+                                //         isRead: false,
+                                //         createdAt: new Date().getTime(),
+                                //       },
+                                //     },
+                                //   }
+                                // );
                               }
                               database.collection("posts").findOne(
                                 {
@@ -918,28 +961,86 @@ http.listen(port, function () {
                               if (
                                 user._id.toString() != post.user._id.toString()
                               ) {
-                                database.collection("users").updateOne(
-                                  {
-                                    _id: post.user._id,
-                                  },
-                                  {
-                                    $push: {
-                                      notifications: {
-                                        _id: ObjectId(),
-                                        type: "new_comment",
-                                        content:
-                                          user.name +
-                                          " commented on your post.",
-                                        profileImage: user.profileImage,
-                                        post: {
-                                          _id: post._id,
-                                        },
-                                        isRead: false,
-                                        createdAt: new Date().getTime(),
-                                      },
-                                    },
-                                  }
-                                );
+                                database
+                                  .collection("notification")
+                                  .findOne(
+                                    { user_id: post.user._id },
+                                    (e, d) => {
+                                      if (d == null) {
+                                        database
+                                          .collection("notification")
+                                          .insertOne({
+                                            user_id: post.user._id,
+                                            notifications: [
+                                              {
+                                                _id: ObjectId(),
+                                                type: "new_comment",
+                                                content:
+                                                  user.name +
+                                                  " commented on your post.",
+                                                profileImage: user.profileImage,
+                                                post: {
+                                                  _id: post._id,
+                                                },
+                                                isRead: false,
+                                                createdAt: new Date().getTime(),
+                                              },
+                                            ],
+                                          });
+                                      } else {
+                                        database
+                                          .collection("notification")
+                                          .updateOne(
+                                            {
+                                              user_id: post.user._id,
+                                            },
+                                            {
+                                              $push: {
+                                                notifications: {
+                                                  _id: ObjectId(),
+                                                  type: "new_comment",
+                                                  content:
+                                                    user.name +
+                                                    " commented on your post.",
+                                                  profileImage:
+                                                    user.profileImage,
+                                                  post: {
+                                                    _id: post._id,
+                                                  },
+                                                  isRead: false,
+                                                  createdAt:
+                                                    new Date().getTime(),
+                                                },
+                                              },
+                                            }
+                                          );
+                                      }
+                                    }
+                                  );
+
+                                //fdf
+                                // database.collection("users").updateOne(
+                                //   {
+                                //     _id: post.user._id,
+                                //   },
+                                //   {
+                                //     $push: {
+                                //       notifications: {
+                                //         _id: ObjectId(),
+                                //         type: "new_comment",
+                                //         content:
+                                //           user.name +
+                                //           " commented on your post.",
+                                //         profileImage: user.profileImage,
+                                //         post: {
+                                //           _id: post._id,
+                                //         },
+                                //         isRead: false,
+                                //         createdAt: new Date().getTime(),
+                                //       },
+                                //     },
+                                //   }
+                                // );
                               }
                               database.collection("posts").findOne(
                                 {
@@ -965,93 +1066,6 @@ http.listen(port, function () {
                         }
                       }
                     );
-
-                    // database.collection("posts").updateOne(
-                    //   {
-                    //     _id: ObjectId(_id),
-                    //   },
-                    //   {
-                    //     $push: {
-                    //       comments: {
-                    //       _id: commentId,
-                    //       user: {
-                    //         _id: user._id,
-                    //         name: user.name,
-                    //         profileImage: user.profileImage,
-                    //       },
-                    //       comment: comment,
-                    //       createdAt: createdAt,
-                    //       replies: [],
-                    //     },
-                    //   },
-                    // },
-                    // function (error, data) {
-                    //   if (user._id.toString() != post.user._id.toString()) {
-                    //     database.collection("users").updateOne(
-                    //       {
-                    //         _id: post.user._id,
-                    //       },
-                    //       {
-                    //         $push: {
-                    //           notifications: {
-                    //             _id: ObjectId(),
-                    //             type: "new_comment",
-                    //             content:
-                    //               user.name + " commented on your post.",
-                    //             profileImage: user.profileImage,
-                    //             post: {
-                    //               _id: post._id,
-                    //             },
-                    //             isRead: false,
-                    //             createdAt: new Date().getTime(),
-                    //           },
-                    //         },
-                    //       }
-                    //     );
-                    //   }
-
-                    // database.collection("users").updateOne(
-                    //   {
-                    //     $and: [
-                    //       {
-                    //         _id: post.user._id,
-                    //       },
-                    //       {
-                    //         "posts._id": post._id,
-                    //       },
-                    //     ],
-                    //   },
-                    //   {
-                    // $push: {
-                    //       "posts.$[].comments": {
-                    //         _id: commentId,
-                    //         user: {
-                    //           _id: user._id,
-                    //           name: user.name,
-                    //           profileImage: user.profileImage,
-                    //         },
-                    //         comment: comment,
-                    //         createdAt: createdAt,
-                    //         replies: [],
-                    //       },
-                    //     },
-                    //   }
-                    // );
-
-                    // database.collection("posts").findOne(
-                    //   {
-                    //     _id: ObjectId(_id),
-                    //   },
-                    //   function (error, updatePost) {
-                    //     result.json({
-                    //       status: "success",
-                    //       message: "Comment has been posted.",
-                    //       updatePost: updatePost,
-                    //     });
-                    //   }
-                    // );
-                    //   }
-                    // );
                   }
                 }
               );
@@ -1261,10 +1275,11 @@ http.listen(port, function () {
                       .collection("friendsList")
                       .findOne({ user_id: user._id }, (e, fds) => {
                         if (e) console.log("error getting friends list");
+
                         result.json({
                           status: "success",
                           message: "friends fetched ",
-                          fnds: fds.friends,
+                          fnds: fds ? fds.friends : [],
                         });
                       });
                   }
@@ -1298,21 +1313,6 @@ http.listen(port, function () {
                       message: "user does not exist",
                     });
                   } else {
-                    database.collection("users").updateOne(
-                      { _id: ObjectId(_id) },
-                      {
-                        $push: {
-                          notifications: {
-                            _id: ObjectId(),
-                            type: "friend_request_accepted",
-                            content: me.name + "accepted your request .",
-                            profileImage: me.profileImage,
-                            createdAt: new Date().getTime(),
-                          },
-                        },
-                      }
-                    );
-
                     database.collection("friendsList").updateOne(
                       {
                         $and: [
@@ -1437,23 +1437,16 @@ http.listen(port, function () {
                 message: "User has been logged out. Please login again.",
               });
             } else {
-              database.collection("users").updateMany(
+              database.collection("notification").updateMany(
                 {
-                  $and: [
-                    {
-                      accessToken: accessToken,
-                    },
-                    {
-                      "notifications.isRead": false,
-                    },
-                  ],
+                  user_id: user._id,
                 },
                 {
                   $set: {
-                    "notifications.$.isRead": true,
+                    "notifications.$[].isRead": true,
                   },
                 },
-                function (error, data) {
+                (e, d) => {
                   result.json({
                     status: "success",
                     message: "Notifications has been marked as read.",
