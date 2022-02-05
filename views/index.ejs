@@ -65,6 +65,8 @@
         var response = JSON.parse(this.responseText);
 
         var html = "";
+        var commentsArray = response.comments;
+        var comment;
         for (var a = 0; a < response.data.length; a++) {
           var data = response.data[a];
 
@@ -116,13 +118,18 @@
             if (data.image != "") {
               html += '<img src="' + mainURL + "/" + data.image + '">';
             }
-
-            html += createLikesSection(data);
+            for (var c = 0; c < commentsArray.length; c++) {
+              if (commentsArray[c].post_id === data._id) {
+                comment = commentsArray[c].comments;
+              }
+            }
+            html += createLikesSection(data, comment);
             html += "</div>";
             html += "</div>";
 
             html += "<div id='post-comments-" + data._id + "'>";
-            html += createCommentsSection(data);
+
+            html += createCommentsSection(data, comment);
             html += "</div>";
 
             html += "</div>";

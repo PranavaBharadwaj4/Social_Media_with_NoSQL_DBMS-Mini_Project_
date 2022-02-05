@@ -30,39 +30,51 @@
   var isFriends = true;
 
   function showFriends() {
-    var html = "";
+    var ajax = new XMLHttpRequest();
+    ajax.open("POST", "/getFriends", true);
 
-    var friends = window.user.friends;
+    ajax.onreadystatechange = function () {
+      if (this.readyState == 4 && this.status == 200) {
+        var response = JSON.parse(this.responseText);
+        // alert(response.message);
+        var html = "";
 
-    for (var a = 0; a < friends.length; a++) {
-      var friend = friends[a];
-      html += "<li>";
-      html += '<div class="nearly-pepls">';
-      html += "<figure>";
-      html += '<a href="/">';
-      html += '<img src="' + mainURL + "/" + friend.profileImage + '">';
-      html += "</a>";
-      html += "</figure>";
-      html += '<div class ="pepl-info">';
-      html += "<h4>";
-      html += '<a href="/">' + friend.name + "</a>";
-      html += "</h4>";
-      if (!friend.sentByMe && friend.status == "Pending") {
-        html +=
-          '<a hfef="javascript:void(0);" data-id="' +
-          friend._id +
-          '"onclick="doAccept(this);" class="add-butn more-action">Accept</a>';
+        var friends = response.fnds;
+        // console.log(friends);
+        for (var a = 0; a < friends.length; a++) {
+          var friend = friends[a];
+          html += "<li>";
+          html += '<div class="nearly-pepls">';
+          html += "<figure>";
+          html += '<a href="/">';
+          html += '<img src="' + mainURL + "/" + friend.profileImage + '">';
+          html += "</a>";
+          html += "</figure>";
+          html += '<div class ="pepl-info">';
+          html += "<h4>";
+          html += '<a href="/">' + friend.name + "</a>";
+          html += "</h4>";
+          if (!friend.sentByMe && friend.status == "Pending") {
+            html +=
+              '<a hfef="javascript:void(0);" data-id="' +
+              friend.f_id +
+              '"onclick="doAccept(this);" class="add-butn more-action">Accept</a>';
+          }
+          html +=
+            '<a href ="javascript:void(0);" data-id="' +
+            friend.f_id +
+            '"onclick="doUnfriend(this);" class="add-butn btn-unfriend">Unfriend</a>';
+          html += "</div>";
+          html += "</div>";
+          html += "</li>";
+        }
+        document.getElementById("friends").innerHTML = html;
       }
-      html +=
-        '<a href ="javascript:void(0);" data-id="' +
-        friend._id +
-        '"onclick="doUnfriend(this);" class="add-butn btn-unfriend">Unfriend</a>';
-      html += "</div>";
-      html += "</div>";
-      html += "</li>";
-    }
-
-    document.getElementById("friends").innerHTML = html;
+    };
+    var formData = new FormData();
+    formData.append("accessToken", localStorage.getItem("accessToken"));
+    formData.append("_id", window.user._id);
+    ajax.send(formData);
   }
 
   function doAccept(self) {
@@ -88,6 +100,7 @@
     var _id = self.getAttribute("data-id");
     var ajax = new XMLHttpRequest();
     ajax.open("POST", "/unfriend", true);
+    console.log(_id);
 
     ajax.onreadystatechange = function () {
       if (this.readyState == 4 && this.status == 200) {

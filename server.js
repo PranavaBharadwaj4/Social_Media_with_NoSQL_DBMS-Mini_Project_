@@ -95,9 +95,8 @@ http.listen(port, function () {
                     city: "",
                     country: "",
                     aboutMe: "",
-                    friends: [],
+
                     notifications: [],
-                    posts: [],
                   },
                   function (error, data) {
                     result.json({
@@ -367,20 +366,23 @@ http.listen(port, function () {
                             .findOne(
                               { accessToken: accessToken },
                               (err, data) => {
-                                database.collection("posts").updateMany(
-                                  {
-                                    "user._id": ObjectId(data._id),
-                                  },
-                                  {
-                                    $set: {
-                                      "user.profileImage": data.profileImage,
+                                // console.log(data);
+                                if (!err) {
+                                  // console.log(data.name);
+                                  database.collection("posts").updateMany(
+                                    {
+                                      "user._id": ObjectId(data._id),
                                     },
-                                  },
-                                  function (err, data) {
-                                    if (err)
-                                      console.log("cannot update profile");
-                                  }
-                                );
+                                    {
+                                      $set: {
+                                        "user.profileImage": data.profileImage,
+                                      },
+                                    },
+                                    function (err, dat) {
+                                      if (err) console.log("user profile err");
+                                    }
+                                  );
+                                }
                               }
                             ); // Delete the file
                           fileSystem.unlink(
@@ -538,8 +540,7 @@ http.listen(port, function () {
                   type: type,
                   createdAt: createdAt,
                   likers: [],
-                  comments: [],
-                  // shares: [],
+
                   user: {
                     _id: user._id,
                     name: user.name,
@@ -548,31 +549,30 @@ http.listen(port, function () {
                   },
                 },
                 function (error, data) {
-                  database.collection("users").updateOne(
-                    {
-                      accessToken: accessToken,
-                    },
-                    {
-                      $push: {
-                        posts: {
-                          _id: data.insertedId,
-                          caption: caption,
-                          image: image,
+                  // database.collection("users").updateOne(
+                  //   {
+                  //     accessToken: accessToken,
+                  //   },
+                  //   {
+                  //     $push: {
+                  //       posts: {
+                  //         _id: data.insertedId,
+                  //         caption: caption,
+                  //         image: image,
 
-                          type: type,
-                          createdAt: createdAt,
-                          likers: [],
-                          comments: [],
-                        },
-                      },
-                    },
-                    function (error, data) {
-                      result.json({
-                        status: "success",
-                        message: "Post has been uploaded.",
-                      });
-                    }
-                  );
+                  //         type: type,
+                  //         createdAt: createdAt,
+                  //         likers: [],
+                  //         comments: [],
+                  //       },
+                  //     },
+                  //   },
+                  //   function (error, data) {}
+                  // );
+                  result.json({
+                    status: "success",
+                    message: "Post has been uploaded.",
+                  });
                 }
               );
             }
@@ -593,31 +593,54 @@ http.listen(port, function () {
                 message: "User has been logged out. Please login again.",
               });
             } else {
-              var ids = [];
-              ids.push(user._id);
-
-              for (const a in user.friends) {
-                if (user.friends[a].status === "Accepted")
-                  ids.push(new ObjectId(user.friends[a]._id));
-              }
-
               database
-                .collection("posts")
-                .find({
-                  "user._id": {
-                    $in: ids,
-                  },
-                })
-                .sort({
-                  createdAt: -1,
-                })
-                .limit(5)
-                .toArray(function (error, data) {
-                  result.json({
-                    status: "success",
-                    message: "Record has been fetched",
-                    data: data,
-                  });
+                .collection("friendsList")
+                .findOne({ user_id: user._id }, (e, fnds) => {
+                  if (e) console.log("error at friendsList");
+
+                  var ids = [];
+                  ids.push(user._id);
+
+                  for (var j = 0; j < fnds.friends.length; j++) {
+                    if (fnds.friends[j].status === "Accepted")
+                      ids.push(fnds.friends[j].f_id);
+                  }
+
+                  database
+                    .collection("posts")
+                    .find({
+                      "user._id": {
+                        $in: ids,
+                      },
+                    })
+                    .sort({
+                      createdAt: -1,
+                    })
+                    .limit(5)
+                    .toArray(function (error, data) {
+                      var postIds = [];
+                      for (var i = 0; i < data.length; i++) {
+                        postIds.push(data[i]._id.toString());
+                      }
+
+                      database
+                        .collection("comment")
+                        .find({
+                          post_id: {
+                            $in: postIds,
+                          },
+                        })
+                        .toArray((e, comment) => {
+                          // console.log(comment, data);
+                          if (e) console.log("getnewFeed er", e);
+                          result.json({
+                            status: "success",
+                            message: "Record has been fetched",
+                            data: data,
+                            comments: comment,
+                          });
+                        });
+                    });
                 });
             }
           }
@@ -802,92 +825,233 @@ http.listen(port, function () {
                   } else {
                     var commentId = ObjectId();
 
-                    database.collection("posts").updateOne(
+                    database.collection("comment").findOne(
                       {
-                        _id: ObjectId(_id),
+                        post_id: _id,
                       },
-                      {
-                        $push: {
-                          comments: {
-                            _id: commentId,
-                            user: {
-                              _id: user._id,
-                              name: user.name,
-                              profileImage: user.profileImage,
-                            },
-                            comment: comment,
-                            createdAt: createdAt,
-                            replies: [],
-                          },
-                        },
-                      },
-                      function (error, data) {
-                        if (user._id.toString() != post.user._id.toString()) {
-                          database.collection("users").updateOne(
+                      (err, data) => {
+                        if (data == null) {
+                          database.collection("comment").insertOne(
                             {
-                              _id: post.user._id,
+                              post_id: _id,
+                              comments: [
+                                {
+                                  user: {
+                                    _id: user._id,
+                                    name: user.name,
+                                    profileImage: user.profileImage,
+                                  },
+                                  comment: comment,
+                                  createdAt: createdAt,
+                                },
+                              ],
+                            },
+                            (e, d) => {
+                              if (e) console.log("error on commenting");
+                              if (
+                                user._id.toString() != post.user._id.toString()
+                              ) {
+                                database.collection("users").updateOne(
+                                  {
+                                    _id: post.user._id,
+                                  },
+                                  {
+                                    $push: {
+                                      notifications: {
+                                        _id: ObjectId(),
+                                        type: "new_comment",
+                                        content:
+                                          user.name +
+                                          " commented on your post.",
+                                        profileImage: user.profileImage,
+                                        post: {
+                                          _id: post._id,
+                                        },
+                                        isRead: false,
+                                        createdAt: new Date().getTime(),
+                                      },
+                                    },
+                                  }
+                                );
+                              }
+                              database.collection("posts").findOne(
+                                {
+                                  _id: ObjectId(_id),
+                                },
+                                function (error, updatePost) {
+                                  database
+                                    .collection("comment")
+                                    .findOne({ post_id: _id }, (err, data) => {
+                                      if (err) console.log("comment not found");
+
+                                      result.json({
+                                        status: "success",
+                                        message: "Comment has been posted.",
+                                        updatePost: updatePost,
+                                        comments: data.comments,
+                                      });
+                                    });
+                                }
+                              );
+                            }
+                          );
+                        } else {
+                          database.collection("comment").updateOne(
+                            {
+                              post_id: _id,
                             },
                             {
                               $push: {
-                                notifications: {
-                                  _id: ObjectId(),
-                                  type: "new_comment",
-                                  content:
-                                    user.name + " commented on your post.",
-                                  profileImage: user.profileImage,
-                                  post: {
-                                    _id: post._id,
+                                comments: {
+                                  user: {
+                                    _id: user._id,
+                                    name: user.name,
+                                    profileImage: user.profileImage,
                                   },
-                                  isRead: false,
-                                  createdAt: new Date().getTime(),
+                                  comment: comment,
+                                  createdAt: createdAt,
                                 },
                               },
+                            },
+                            (err, dat) => {
+                              if (err) console.log("comment error", err);
+                              if (
+                                user._id.toString() != post.user._id.toString()
+                              ) {
+                                database.collection("users").updateOne(
+                                  {
+                                    _id: post.user._id,
+                                  },
+                                  {
+                                    $push: {
+                                      notifications: {
+                                        _id: ObjectId(),
+                                        type: "new_comment",
+                                        content:
+                                          user.name +
+                                          " commented on your post.",
+                                        profileImage: user.profileImage,
+                                        post: {
+                                          _id: post._id,
+                                        },
+                                        isRead: false,
+                                        createdAt: new Date().getTime(),
+                                      },
+                                    },
+                                  }
+                                );
+                              }
+                              database.collection("posts").findOne(
+                                {
+                                  _id: ObjectId(_id),
+                                },
+                                function (error, updatePost) {
+                                  database
+                                    .collection("comment")
+                                    .findOne({ post_id: _id }, (err, data) => {
+                                      if (err) console.log("comment not found");
+
+                                      result.json({
+                                        status: "success",
+                                        message: "Comment has been posted.",
+                                        updatePost: updatePost,
+                                        comments: data.comments,
+                                      });
+                                    });
+                                }
+                              );
                             }
                           );
                         }
-
-                        database.collection("users").updateOne(
-                          {
-                            $and: [
-                              {
-                                _id: post.user._id,
-                              },
-                              {
-                                "posts._id": post._id,
-                              },
-                            ],
-                          },
-                          {
-                            $push: {
-                              "posts.$[].comments": {
-                                _id: commentId,
-                                user: {
-                                  _id: user._id,
-                                  name: user.name,
-                                  profileImage: user.profileImage,
-                                },
-                                comment: comment,
-                                createdAt: createdAt,
-                                replies: [],
-                              },
-                            },
-                          }
-                        );
-
-                        database.collection("posts").findOne(
-                          {
-                            _id: ObjectId(_id),
-                          },
-                          function (error, updatePost) {
-                            result.json({
-                              status: "success",
-                              message: "Comment has been posted.",
-                              updatePost: updatePost,
-                            });
-                          }
-                        );
                       }
                     );
+
+                    // database.collection("posts").updateOne(
+                    //   {
+                    //     _id: ObjectId(_id),
+                    //   },
+                    //   {
+                    //     $push: {
+                    //       comments: {
+                    //       _id: commentId,
+                    //       user: {
+                    //         _id: user._id,
+                    //         name: user.name,
+                    //         profileImage: user.profileImage,
+                    //       },
+                    //       comment: comment,
+                    //       createdAt: createdAt,
+                    //       replies: [],
+                    //     },
+                    //   },
+                    // },
+                    // function (error, data) {
+                    //   if (user._id.toString() != post.user._id.toString()) {
+                    //     database.collection("users").updateOne(
+                    //       {
+                    //         _id: post.user._id,
+                    //       },
+                    //       {
+                    //         $push: {
+                    //           notifications: {
+                    //             _id: ObjectId(),
+                    //             type: "new_comment",
+                    //             content:
+                    //               user.name + " commented on your post.",
+                    //             profileImage: user.profileImage,
+                    //             post: {
+                    //               _id: post._id,
+                    //             },
+                    //             isRead: false,
+                    //             createdAt: new Date().getTime(),
+                    //           },
+                    //         },
+                    //       }
+                    //     );
+                    //   }
+
+                    // database.collection("users").updateOne(
+                    //   {
+                    //     $and: [
+                    //       {
+                    //         _id: post.user._id,
+                    //       },
+                    //       {
+                    //         "posts._id": post._id,
+                    //       },
+                    //     ],
+                    //   },
+                    //   {
+                    // $push: {
+                    //       "posts.$[].comments": {
+                    //         _id: commentId,
+                    //         user: {
+                    //           _id: user._id,
+                    //           name: user.name,
+                    //           profileImage: user.profileImage,
+                    //         },
+                    //         comment: comment,
+                    //         createdAt: createdAt,
+                    //         replies: [],
+                    //       },
+                    //     },
+                    //   }
+                    // );
+
+                    // database.collection("posts").findOne(
+                    //   {
+                    //     _id: ObjectId(_id),
+                    //   },
+                    //   function (error, updatePost) {
+                    //     result.json({
+                    //       status: "success",
+                    //       message: "Comment has been posted.",
+                    //       updatePost: updatePost,
+                    //     });
+                    //   }
+                    // );
+                    //   }
+                    // );
                   }
                 }
               );
@@ -905,26 +1069,50 @@ http.listen(port, function () {
 
       app.post("/search", function (request, result) {
         var query = request.fields.query;
+        var accessToken = request.fields.accessToken;
+
         database
           .collection("users")
-          .find({
-            name: {
-              $regex: ".*" + query + ".*",
-              $options: "i",
-            },
-          })
-          .toArray(function (error, data) {
-            result.json({
-              status: "success",
-              message: "Record has been fetched",
-              data: data,
-            });
+          .findOne({ accessToken: accessToken }, (e, user) => {
+            if (user == null) {
+              console.log("no user found in search query");
+            } else {
+              database
+                .collection("users")
+                .find({
+                  name: {
+                    $regex: ".*" + query + ".*",
+                    $options: "i",
+                  },
+                })
+                .toArray(function (error, data) {
+                  database
+                    .collection("friendsList")
+                    .findOne({ user_id: user._id }, (e, d) => {
+                      if (e) {
+                        console.log("error at search query");
+                        result.json({
+                          status: "error",
+                          message: "failed fetcing comment",
+                        });
+                      } else {
+                        result.json({
+                          status: "success",
+                          message: "Record has been fetched",
+                          data: data,
+                          friends: d ? d.friends : [],
+                        });
+                      }
+                    });
+                });
+            }
           });
       });
       app.post("/sendFriendRequest", (request, result) => {
         var accessToken = request.fields.accessToken;
         var _id = request.fields._id;
         // console.log("senttt");
+
         database.collection("users").findOne(
           {
             accessToken: accessToken,
@@ -946,67 +1134,96 @@ http.listen(port, function () {
                       message: "user does not exist",
                     });
                   } else {
-                    database.collection("users").updateOne(
-                      { _id: ObjectId(_id) },
-                      {
-                        $push: {
-                          friends: {
-                            _id: me._id,
-                            name: me.name,
-                            profileImage: me.profileImage,
-                            status: "Pending",
-                            sentByMe: false,
-                          },
-                          notifications: {
-                            _id: ObjectId(),
-                            type: "friend_Reqeust_Sent",
-                            content: me.name + " sent you friend request .",
-                            profileImage: me.profileImage,
-                            isRead: false,
-                            createdAt: new Date().getTime(),
-                          },
-                        },
-                      },
-                      function (error, data) {
-                        database.collection("users").updateOne(
-                          { _id: me._id },
-                          {
-                            $push: {
-                              friends: {
-                                _id: user._id,
-                                name: user.name,
-                                profileImage: user.profileImage,
-                                status: "Pending",
-                                sentByMe: true,
+                    database
+                      .collection("friendsList")
+                      .findOne({ user_id: me._id }, (e, data) => {
+                        if (data == null) {
+                          database.collection("friendsList").insertOne(
+                            {
+                              user_id: me._id,
+                              friends: [
+                                {
+                                  f_id: user._id,
+                                  name: user.name,
+                                  profileImage: user.profileImage,
+                                  status: "Pending",
+                                  sentByMe: true,
+                                },
+                              ],
+                            },
+                            (e, d) => {
+                              if (e) console.log("eror at friends list");
+                            }
+                          );
+                        } else {
+                          database.collection("friendsList").updateOne(
+                            { user_id: me._id },
+                            {
+                              $push: {
+                                friends: {
+                                  f_id: user._id,
+                                  name: user.name,
+                                  profileImage: user.profileImage,
+                                  status: "Pending",
+                                  sentByMe: true,
+                                },
                               },
                             },
-                          },
-                          function (error, data) {
-                            //   database.collection("users").updateOne(
-                            //     { _id: _id },
-                            //     {
-                            //       $push: {
-                            //         notifications: {
-                            //           _id: ObjectId(),
-                            //           type: "friend_Reqeust_Sent",
-                            //           content:
-                            //             me.name + " sent you friend request .",
-                            //           profileImage: me.profileImage,
-                            //           isRead: false,
-                            //           createdAt: new Date().getTime(),
-                            //         },
-                            //       },
-                            //     },
-                            //     (err, d) => {}
-                            //   );
-                            result.json({
-                              status: "success",
-                              message: "Friend request sent .",
-                            });
-                          }
-                        );
-                      }
-                    );
+                            (e, d) => {
+                              if (e) console.log("error at friendlist ");
+                            }
+                          );
+                        }
+                        database
+                          .collection("friendsList")
+                          .findOne({ user_id: user._id }, (e, data) => {
+                            if (data == null) {
+                              database.collection("friendsList").insertOne(
+                                {
+                                  user_id: user._id,
+                                  friends: [
+                                    {
+                                      f_id: me._id,
+                                      name: me.name,
+                                      profileImage: me.profileImage,
+                                      status: "Pending",
+                                      sentByMe: false,
+                                    },
+                                  ],
+                                },
+                                (e, d) => {
+                                  if (e) console.log("eor at friendlist");
+                                  result.json({
+                                    status: "success",
+                                    message: "Friend request sent .",
+                                  });
+                                }
+                              );
+                            } else {
+                              database.collection("friendsList").updateOne(
+                                { user_id: user._id },
+                                {
+                                  $push: {
+                                    friends: {
+                                      f_id: me._id,
+                                      name: me.name,
+                                      profileImage: me.profileImage,
+                                      status: "Pending",
+                                      sentByMe: false,
+                                    },
+                                  },
+                                },
+                                (e, d) => {
+                                  if (e) console.log("eror at friendslist");
+                                  result.json({
+                                    status: "success",
+                                    message: "Friend request sent .",
+                                  });
+                                }
+                              );
+                            }
+                          });
+                      });
                   }
                 });
             }
@@ -1015,6 +1232,46 @@ http.listen(port, function () {
       });
       app.get("/friends", function (request, result) {
         result.render("friends");
+      });
+
+      app.post("/getFriends", (request, result) => {
+        var accessToken = request.fields.accessToken;
+        var _id = request.fields._id;
+        database
+          .collection("users")
+          .findOne({ accessToken: accessToken }, (e, user) => {
+            if (user == null) {
+              result.json({
+                status: "error",
+                message: "user has been logged out .please login again",
+              });
+            } else {
+              database.collection("users").findOne(
+                {
+                  _id: ObjectId(_id),
+                },
+                (error, user) => {
+                  if (user == null) {
+                    result.json({
+                      status: "error",
+                      message: "user does not exist",
+                    });
+                  } else {
+                    database
+                      .collection("friendsList")
+                      .findOne({ user_id: user._id }, (e, fds) => {
+                        if (e) console.log("error getting friends list");
+                        result.json({
+                          status: "success",
+                          message: "friends fetched ",
+                          fnds: fds.friends,
+                        });
+                      });
+                  }
+                }
+              );
+            }
+          });
       });
 
       app.post("/acceptFriendRequest", (request, result) => {
@@ -1056,11 +1313,11 @@ http.listen(port, function () {
                       }
                     );
 
-                    database.collection("users").updateOne(
+                    database.collection("friendsList").updateOne(
                       {
                         $and: [
-                          { _id: ObjectId(_id) },
-                          { "friends._id": me._id },
+                          { user_id: user._id },
+                          { "friends.f_id": me._id },
                         ],
                       },
                       {
@@ -1069,11 +1326,11 @@ http.listen(port, function () {
                         },
                       },
                       function (error, data) {
-                        database.collection("users").updateOne(
+                        database.collection("friendsList").updateOne(
                           {
                             $and: [
-                              { _id: me._id },
-                              { "friends._id": user._id },
+                              { user_id: me._id },
+                              { "friends.f_id": user._id },
                             ],
                           },
                           {
@@ -1100,6 +1357,7 @@ http.listen(port, function () {
       app.post("/unfriend", (request, result) => {
         var accessToken = request.fields.accessToken;
         var _id = request.fields._id;
+
         database
           .collection("users")
           .findOne({ accessToken: accessToken }, (error, user) => {
@@ -1110,35 +1368,38 @@ http.listen(port, function () {
               });
             } else {
               var me = user;
+
               database.collection("users").findOne(
                 {
                   _id: ObjectId(_id),
                 },
                 (error, user) => {
+                  if (error) console.log("error at unfriending");
+
                   if (user == null) {
                     result.json({
                       status: "error",
                       message: "user does not exist",
                     });
                   } else {
-                    database.collection("users").updateOne(
-                      { _id: ObjectId(_id) },
+                    database.collection("friendsList").updateOne(
+                      { user_id: user._id },
                       {
                         $pull: {
                           friends: {
-                            _id: me._id,
+                            f_id: me._id,
                           },
                         },
                       },
                       (error, data) => {
-                        database.collection("users").updateOne(
+                        database.collection("friendsList").updateOne(
                           {
-                            _id: me._id,
+                            user_id: me._id,
                           },
                           {
                             $pull: {
                               friends: {
-                                _id: user._id,
+                                f_id: user._id,
                               },
                             },
                           },

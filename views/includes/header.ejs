@@ -43,10 +43,11 @@
         </div>
       </div>
 
-      <%mainURL = "https://dbms-mini-project.herokuapp.com" %>
+      <%mainURL = "http://localhost:3000"%>
 
       <script>
-        var mainURL = "https://dbms-mini-project.herokuapp.com";
+        // var mainURL = "https://dbms-mini-project.herokuapp.com";
+        var mainURL = "http://localhost:3000";
 
         var months = [
           "January",
@@ -68,7 +69,8 @@
             "/search/" + button.previousElementSibling.value;
         }
 
-        function createLikesSection(data) {
+        function createLikesSection(data, comment) {
+          if (comment === undefined) comment = [];
           var isLiked = false;
           for (var b = 0; b < data.likers.length; b++) {
             var liker = data.likers[b];
@@ -111,7 +113,7 @@
             '<ins id="count-post-comments-' +
             data._id +
             '">' +
-            data.comments.length +
+            comment.length +
             "</ins>";
           html += "</span>";
           html += "</li>";
@@ -158,17 +160,19 @@
           ajax.send(formData);
         }
 
-        function createCommentsSection(data) {
+        function createCommentsSection(data, commentsArray) {
           var html = "";
 
           html += '<div class="coment-area">';
           html +=
             '<ul class="we-comet" style="max-height: 300px; overflow-y: scroll;">';
 
-          data.comments = data.comments.reverse();
-          for (var b = 0; b < data.comments.length; b++) {
-            var comment = data.comments[b];
-            if (comment !== "") {
+          // data.comments = data.comments.reverse();
+          if (commentsArray === undefined) commentsArray = [];
+          commentsArray = commentsArray.reverse();
+          for (var b = 0; b < commentsArray.length; b++) {
+            var comment = commentsArray[b];
+            if (comment.comment !== "") {
               html += "<li>";
               html += '<div class="comet-avatar">';
               html +=
@@ -234,7 +238,10 @@
               if (response.status == "success") {
                 form.comment.value = "";
 
-                var commentsHtml = createCommentsSection(response.updatePost);
+                var commentsHtml = createCommentsSection(
+                  response.updatePost,
+                  response.comments
+                );
                 document.getElementById(
                   "post-comments-" + form._id.value
                 ).innerHTML = commentsHtml;

@@ -18,8 +18,7 @@
       <div class="row">
         <div class="col-md-12">
           <div class="row" id="page-contents">
-            <div class="col-md-3"></div>
-
+            <div class="col-md-3"><%- include ("includes/left-sidebar") %></div>
             <div class="col-md-6">
               <div class="central-meta">
                 <div class="frnds">
@@ -54,7 +53,10 @@
         var response = JSON.parse(this.responseText);
 
         if (response.status == "success") {
+          // console.log("search results");
           var html = "";
+          var fds = response.friends;
+
           for (var a = 0; a < response.data.length; a++) {
             var data = response.data[a];
 
@@ -62,10 +64,11 @@
               continue;
             }
             var isFriend = false;
-
-            for (const a in user.friends) {
-              if (data._id == window.user.friends[a]._id) {
+            // console.log(fds);
+            for (const a in fds) {
+              if (data._id == fds[a].f_id) {
                 isFriend = true;
+
                 break;
               }
             }
@@ -110,6 +113,7 @@
     };
 
     var formData = new FormData();
+    formData.append("accessToken", localStorage.getItem("accessToken"));
     formData.append("query", document.getElementById("query").value);
     ajax.send(formData);
   }
