@@ -601,7 +601,7 @@ http.listen(port, function () {
                     .sort({
                       createdAt: -1,
                     })
-                    .limit(7)
+                    .limit(25)
                     .toArray(function (error, data) {
                       var postIds = [];
                       for (var i = 0; i < data.length; i++) {
@@ -713,6 +713,7 @@ http.listen(port, function () {
                               notifications: {
                                 _id: ObjectId(),
                                 type: "photo_liked",
+                                username: user.username,
                                 content: user.name + " has liked your post.",
                                 profileImage: user.profileImage,
                                 isRead: false,
@@ -824,7 +825,7 @@ http.listen(port, function () {
                                               {
                                                 _id: ObjectId(),
                                                 type: "new_comment",
-                                                username: user.name,
+                                                username: user.username,
                                                 content:
                                                   user.name +
                                                   " commented on your post.",
@@ -849,6 +850,7 @@ http.listen(port, function () {
                                                 notifications: {
                                                   _id: ObjectId(),
                                                   type: "new_comment",
+                                                  username: user.username,
                                                   content:
                                                     user.name +
                                                     " commented on your post.",
@@ -926,6 +928,7 @@ http.listen(port, function () {
                                               {
                                                 _id: ObjectId(),
                                                 type: "new_comment",
+                                                username: user.username,
                                                 content:
                                                   user.name +
                                                   " commented on your post.",
@@ -950,6 +953,7 @@ http.listen(port, function () {
                                                 notifications: {
                                                   _id: ObjectId(),
                                                   type: "new_comment",
+                                                  username: user.username,
                                                   content:
                                                     user.name +
                                                     " commented on your post.",
@@ -1126,7 +1130,7 @@ http.listen(port, function () {
                                   {
                                     _id: ObjectId(),
                                     type: "friend-request",
-                                    username: me.name,
+                                    username: me.username,
                                     content:
                                       me.name + " sent you friend request  !.",
                                     profileImage: me.profileImage,
@@ -1145,7 +1149,7 @@ http.listen(port, function () {
                                     notifications: {
                                       _id: ObjectId(),
                                       type: "friend-request",
-                                      username: me.name,
+                                      username: me.username,
                                       content:
                                         me.name + " sent you friend request.",
                                       profileImage: me.profileImage,
@@ -1321,7 +1325,7 @@ http.listen(port, function () {
                                         {
                                           _id: ObjectId(),
                                           type: "friend-request",
-                                          username: me.name,
+                                          username: me.username,
                                           content:
                                             me.name +
                                             " accepted   your friend request !.",
@@ -1341,7 +1345,7 @@ http.listen(port, function () {
                                         notifications: {
                                           _id: ObjectId(),
                                           type: "friend-request",
-                                          username: me.name,
+                                          username: me.username,
                                           content:
                                             me.name +
                                             " accepted your friend request.",

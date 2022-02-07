@@ -126,6 +126,7 @@
             if (data.image != "") {
               html += '<img src="' + mainURL + "/" + data.image + '">';
             }
+            comment = [];
             for (var c = 0; c < commentsArray.length; c++) {
               if (commentsArray[c].post_id === data._id) {
                 comment = commentsArray[c].comments;
